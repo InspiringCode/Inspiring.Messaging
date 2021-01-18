@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Inspiring.Messaging {
-    public interface IHandles<M, R> where M : IMessage<M, R> {
+    public interface IHandles<in M, R> where M : IMessage<M, R> {
+        R Handle(M m);
     }
 }
