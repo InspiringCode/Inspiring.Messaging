@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Inspiring.Messaging {
-    public interface IResultAggregator<R> {
-        R Aggregate(IEnumerable<R> values);
+    public interface IMessenger {
+        R Send<M, R>(IMessage<M, R> message) where M : IMessage<M, R>;
     }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 
 namespace Inspiring.Messaging.Core {
-    class MessagePipeline<M, R> where M : IMessage<M, R> {
+    public class MessagePipeline<M, R> : IMessagePipeline<M, R> where M : IMessage<M, R> {
         private readonly Func<IEnumerable<IHandles<M, R>>> _defaultHandlerFactory;
         private readonly Func<IResultAggregator<R>> _defaultAggregatorFactory;
         private readonly Func<M, PipelineParameters, R> _processPipeline;
@@ -29,7 +29,7 @@ namespace Inspiring.Messaging.Core {
             _getHandlerPipeline = Pipeline<M, PipelineParameters, IEnumerable<IHandles<M, R>>>.Create(
                 middlewares.OfType<IHandlerProvider<M, R>>(),
                 m => m.GetHandlers,
-                GetHandlersCore);
+                GetHandlers);
 
             _dispatchPipeline = Pipeline<M, PipelineParameters, IEnumerable<IHandles<M, R>>, IEnumerable<R>>.Create(
                 middlewares.OfType<IMessageDispatcher<M, R>>(),
@@ -57,7 +57,7 @@ namespace Inspiring.Messaging.Core {
             return _aggregatePipeline(m, ps, results);
         }
 
-        protected virtual IEnumerable<IHandles<M, R>> GetHandlersCore(M m, PipelineParameters ps)
+        protected virtual IEnumerable<IHandles<M, R>> GetHandlers(M m, PipelineParameters ps)
             => _defaultHandlerFactory();
 
         protected virtual IEnumerable<R> DispatchToHandlers(
