@@ -9,21 +9,13 @@ using Xbehave;
 namespace Inspiring.Messaging.Tests.Core {
     // TODO: Make all these tests better and clearer...
     public class MessagePipelineTests : Feature {
-        private TestContainer _container;
-
-        [Background]
-        public void Background() {
-            USING["a test container"] |= () => _container = new TestContainer();
-        }
-
         [Scenario]
-        internal void Process(string[] result) {
-            GIVEN["some registered handlers"] |= () => _container.Add(new[] {
+        internal void Process(TestHandler[] handlers, string[] result) {
+            GIVEN["some registered handlers"] |= () => handlers = new[] {
                 new TestHandler { Input = "Result 1" },
-                new TestHandler { Input = "Result 2" } });
+                new TestHandler { Input = "Result 2" } };
 
-            WHEN["sending a message"] |= () => result = InvokePipeline(new TestMessage());
-
+            WHEN["sending a message"] |= () => result = Send(new TestMessage(), handlers: handlers, aggregator: new TestAggregator());
             THEN["the aggregated results are returned"] |= () => result.Should().BeEquivalentTo("Result 1", "Result 2");
         }
 
@@ -43,7 +35,7 @@ namespace Inspiring.Messaging.Tests.Core {
                     new DispatcherAndInvoker() };
             };
 
-            WHEN["sending a message"] |= () => result = InvokePipeline(new TestMessage(), mws);
+            WHEN["sending a message"] |= () => result = Send(new TestMessage(), mws, aggregator: new TestAggregator());
             THEN["the aggregated results are returned"] |= () => result.Should().BeEquivalentTo("[Result 2]", "[Result 1]");
         }
 
@@ -53,32 +45,38 @@ namespace Inspiring.Messaging.Tests.Core {
                 mw = new ProcessorMock<IMessage, object>();
                 nonApplicableMw = new ProcessorMock<OtherMessage, object>();
             };
-            WHEN["sending a message"] |= () => InvokePipeline(new TestMessage(), nonApplicableMw, mw);
+            WHEN["sending a message"] |= () => Send(new TestMessage(), new IMessageMiddleware[] { nonApplicableMw, mw });
             THEN["compatible middlewares are called"] |= () => mw.WasCalled.Should().BeTrue();
             AND["incompatible middlewares are not called"] |= () => nonApplicableMw.WasCalled.Should().BeFalse();
         }
 
         [Scenario]
-        internal void DefaultResultAggregation(
-            MessagePipeline<TestMessage<string>, string> p,
-            TestContainer c,
-            string result
-        ) {
-            GIVEN["a pipeline without a result aggregator"] |= () => p = new();
-            AND["multiple handlers"] |= () => c = new TestContainer().Add(new[] {
+        internal void DefaultPipelineBehavior(IHandles<TestMessage<string>, string>[] handlers, string result) {
+            GIVEN["multiple handlers"] |= () => handlers = new[] {
                 new TestHandler<TestMessage<string>, string>() { Result = "R1" },
                 new TestHandler<TestMessage<string>, string>() { Result = "R2" },
-            });
-            WHEN["sending a message"] |= () => result = p.Process(new TestMessage<string>(), new MessageContext(c));
+            };
+            WHEN["sending a message"] |= () => result = Send(new TestMessage<string>(), handlers: handlers);
             THEN["the last result is returned"] |= () => result.Should().Be("R2");
         }
 
-        private R InvokePipeline<M, R>(IMessage<M, R> message, params IMessageMiddleware[] middlewares) where M : IMessage<M, R> {
-            MessagePipeline<M, R> p = new(
-                middlewares,
-                (IResultAggregator<R>)new TestAggregator());
+        private R Send<M, R>(
+            IMessage<M, R> message, 
+            IMessageMiddleware[] middlewares = null,
+            IHandles<M,R>[] handlers = null,
+            IResultAggregator<R> aggregator = null
+        ) where M : IMessage<M, R> {
+            TestContainer c = new();
 
-            return p.Process((M)message, new MessageContext(_container));
+            if (aggregator != null)
+                c.Add(new MessagePipeline<M, R>(middlewares ?? Enumerable.Empty<IMessageMiddleware>(), aggregator));
+            else if (middlewares != null)
+                c.Add(new MessagePipeline<M, R>(middlewares));
+
+            if (handlers != null)
+                c.Add(handlers);
+
+            return new ContainerMessenger(c).Send(message);
         }
 
         internal class ProcessorMock<MBase, RBase> : IMessageProcessor<MBase, RBase> {

@@ -5,6 +5,8 @@ using System.Text;
 
 namespace Inspiring.Messaging.Core {
     public class MessagePipeline<M, R> : IMessagePipeline<M, R> where M : IMessage<M, R> {
+        public static readonly MessagePipeline<M, R> Default = new();
+
         private readonly IResultAggregator<R> _defaultAggregator;
         private readonly Func<M, MessageContext, R> _processPipeline;
         private readonly Func<M, MessageContext, IEnumerable<IHandles<M, R>>> _getHandlerPipeline;
@@ -61,7 +63,7 @@ namespace Inspiring.Messaging.Core {
         }
 
         protected virtual IEnumerable<IHandles<M, R>> GetHandlers(M m, MessageContext context) =>
-            (IEnumerable<IHandles<M, R>>)context.Services.GetService(typeof(IEnumerable<IHandles<M, R>>)) ??
+            context.Services.GetService<IEnumerable<IHandles<M, R>>>() ??
             Enumerable.Empty<IHandles<M, R>>();
 
         protected virtual IEnumerable<R> DispatchToHandlers(

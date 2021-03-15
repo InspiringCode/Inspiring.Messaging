@@ -6,6 +6,6 @@ namespace Inspiring.Messaging.Core {
         public static readonly TakeLastResultAggregator<R> Instance = new();
 
         public R Aggregate(IEnumerable<R> values)
-            => values.Last();
+            => values.LastOrDefault();
     }
 }
