@@ -12,6 +12,12 @@ namespace Inspiring.Messaging.Core {
         private readonly Func<M, MessageContext, IHandles<M, R>, R> _invokeHandlerPipeline;
         private readonly Func<M, MessageContext, IEnumerable<R>, R> _aggregatePipeline;
 
+        public MessagePipeline()
+            : this(Enumerable.Empty<IMessageMiddleware>()) { }
+
+        public MessagePipeline(IEnumerable<IMessageMiddleware> middlewares)
+            : this(middlewares, TakeLastResultAggregator<R>.Instance) { }
+
         public MessagePipeline(
             IEnumerable<IMessageMiddleware> middlewares,
             IResultAggregator<R> defaultAggregator

@@ -58,6 +58,21 @@ namespace Inspiring.Messaging.Tests.Core {
             AND["incompatible middlewares are not called"] |= () => nonApplicableMw.WasCalled.Should().BeFalse();
         }
 
+        [Scenario]
+        internal void DefaultResultAggregation(
+            MessagePipeline<TestMessage<string>, string> p,
+            TestContainer c,
+            string result
+        ) {
+            GIVEN["a pipeline without a result aggregator"] |= () => p = new();
+            AND["multiple handlers"] |= () => c = new TestContainer().Add(new[] {
+                new TestHandler<TestMessage<string>, string>() { Result = "R1" },
+                new TestHandler<TestMessage<string>, string>() { Result = "R2" },
+            });
+            WHEN["sending a message"] |= () => result = p.Process(new TestMessage<string>(), new MessageContext(c));
+            THEN["the last result is returned"] |= () => result.Should().Be("R2");
+        }
+
         private R InvokePipeline<M, R>(IMessage<M, R> message, params IMessageMiddleware[] middlewares) where M : IMessage<M, R> {
             MessagePipeline<M, R> p = new(
                 middlewares,
@@ -117,6 +132,8 @@ namespace Inspiring.Messaging.Tests.Core {
             }
         }
 
+        public class TestMessage<R> : IMessage<TestMessage<R>, R> { }
+
         public class TestMessage : IMessage<TestMessage, string[]> { }
 
         public class OtherMessage : IMessage<OtherMessage, string[]> { }
@@ -127,6 +144,13 @@ namespace Inspiring.Messaging.Tests.Core {
 
             public string[] Handle(TestMessage m)
                 => new[] { Input };
+        }
+
+        internal class TestHandler<M, R> : IHandles<M, R> where M : IMessage<M, R> {
+            public R Result { get; set; }
+
+            public R Handle(M m)
+                => Result;
         }
 
         internal class TestAggregator : IResultAggregator<string[]> {
