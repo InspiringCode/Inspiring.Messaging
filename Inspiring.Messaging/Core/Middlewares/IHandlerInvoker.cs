@@ -1,11 +1,11 @@
 ﻿using System;
 
 namespace Inspiring.Messaging.Core {
-    public interface IHandlerInvoker<M, R> : IMessageMiddleware<M, R> where M : IMessage<M, R> {
+    public interface IHandlerInvoker<M, R> : IMessageMiddleware where M : IMessage<M, R> {
         R Invoke(
             M m,
-            PipelineParameters ps,
+            MessageContext context,
             IHandles<M, R> h, 
-            Func<M, PipelineParameters, IHandles<M, R>, R> next);
+            Func<M, MessageContext, IHandles<M, R>, R> next);
     }
 }

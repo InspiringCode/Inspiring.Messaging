@@ -11,7 +11,7 @@ namespace Inspiring.Messaging.Core {
 
         public R Send<M, R>(IMessage<M, R> message) where M : IMessage<M, R> {
             var pipeline = (IMessagePipeline<M, R>)_services.GetService(typeof(IMessagePipeline<M, R>));
-            return pipeline.Process((M)message, new PipelineParameters());
+            return pipeline.Process((M)message, new MessageContext(_services));
         }
     }
 }

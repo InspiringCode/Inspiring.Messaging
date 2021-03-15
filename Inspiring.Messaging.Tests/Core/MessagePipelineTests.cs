@@ -9,24 +9,27 @@ using Xbehave;
 namespace Inspiring.Messaging.Tests.Core {
     // TODO: Make all these tests better and clearer...
     public class MessagePipelineTests : Feature {
-        [Scenario]
-        internal void Process(MessagePipeline<TestMessage, string[]> p, string[] result) {
-            GIVEN["a message pipeline"] |= () => p = new MessagePipeline<TestMessage, string[]>(
-                Enumerable.Empty<IMessageMiddleware<TestMessage, string[]>>(),
-                () => new[] {
-                    new TestHandler { Input = "Result 1" },
-                    new TestHandler { Input = "Result 2" }
-                },
-                () => new TestAggregator());
+        private TestContainer _container;
 
-            WHEN["sending a message"] |= () => result = p.Process(new TestMessage(), new PipelineParameters());
+        [Background]
+        public void Background() {
+            USING["a test container"] |= () => _container = new TestContainer();
+        }
+
+        [Scenario]
+        internal void Process(string[] result) {
+            GIVEN["some registered handlers"] |= () => _container.Add(new[] {
+                new TestHandler { Input = "Result 1" },
+                new TestHandler { Input = "Result 2" } });
+
+            WHEN["sending a message"] |= () => result = InvokePipeline(new TestMessage());
 
             THEN["the aggregated results are returned"] |= () => result.Should().BeEquivalentTo("Result 1", "Result 2");
         }
 
         [Scenario]
-        internal void Middlewares(MessagePipeline<TestMessage, string[]> p, string[] result) {
-            GIVEN["a message pipeline"] |= () => {
+        internal void Middlewares(IMessageMiddleware[] mws, string[] result) {
+            GIVEN["several kinds of middleware"] |= () => {
                 var handlerProvider = Substitute.For<IHandlerProvider<TestMessage, string[]>>();
                 handlerProvider.GetHandlers(default, default, default).ReturnsForAnyArgs(new[] {
                     new TestHandler { Input = "Result 1" },
@@ -34,29 +37,32 @@ namespace Inspiring.Messaging.Tests.Core {
                     new TestHandler { Input = "Result 3" }
                 });
 
-                p = new MessagePipeline<TestMessage, string[]>(
-                    new IMessageMiddleware<TestMessage, string[]>[] {
-                        handlerProvider,
-                        new TestMessageAggregator(),
-                        new DispatcherAndInvoker()
-                    },
-                    () => throw new InvalidOperationException(),
-                    () => new TestAggregator());
+                mws = new IMessageMiddleware[] {
+                    handlerProvider,
+                    new TestMessageAggregator(),
+                    new DispatcherAndInvoker() };
             };
 
-            WHEN["sending a message"] |= () => result = p.Process(new TestMessage(), new PipelineParameters());
-
+            WHEN["sending a message"] |= () => result = InvokePipeline(new TestMessage(), mws);
             THEN["the aggregated results are returned"] |= () => result.Should().BeEquivalentTo("[Result 2]", "[Result 1]");
+        }
+
+        private R InvokePipeline<M, R>(IMessage<M, R> message, params IMessageMiddleware[] middlewares) where M : IMessage<M, R> {
+            MessagePipeline<M, R> p = new(
+                middlewares,
+                (IResultAggregator<R>)new TestAggregator());
+
+            return p.Process((M)message, new MessageContext(_container));
         }
 
         internal class TestMessageAggregator : IMessageResultAggregator<TestMessage, string[]> {
             public string[] Aggregate(
                 TestMessage m,
-                PipelineParameters ps,
+                MessageContext context,
                 IEnumerable<string[]> results,
-                Func<TestMessage, PipelineParameters, IEnumerable<string[]>, string[]> next
+                Func<TestMessage, MessageContext, IEnumerable<string[]>, string[]> next
             ) {
-                return next(m, ps, results)
+                return next(m, context, results)
                     .Reverse()
                     .ToArray();
             }
@@ -68,18 +74,18 @@ namespace Inspiring.Messaging.Tests.Core {
 
             public IEnumerable<string[]> Dispatch(
                 TestMessage m,
-                PipelineParameters ps,
+                MessageContext context,
                 IEnumerable<IHandles<TestMessage, string[]>> handlers,
-                Func<TestMessage, PipelineParameters, IEnumerable<IHandles<TestMessage, string[]>>, IEnumerable<string[]>> next
+                Func<TestMessage, MessageContext, IEnumerable<IHandles<TestMessage, string[]>>, IEnumerable<string[]>> next
             ) {
-                return next(m, ps, handlers.Take(2));
+                return next(m, context, handlers.Take(2));
             }
 
             public string[] Invoke(
                 TestMessage m,
-                PipelineParameters ps,
+                MessageContext context,
                 IHandles<TestMessage, string[]> h,
-                Func<TestMessage, PipelineParameters, IHandles<TestMessage, string[]>, string[]> next
+                Func<TestMessage, MessageContext, IHandles<TestMessage, string[]>, string[]> next
             ) {
                 return h
                     .Handle(m)
