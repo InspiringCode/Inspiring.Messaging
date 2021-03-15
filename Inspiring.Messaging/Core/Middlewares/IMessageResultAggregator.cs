@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 
 namespace Inspiring.Messaging.Core {
-    public interface IMessageResultAggregator<M, R> : IMessageMiddleware where M : IMessage<M, R> {
-        R Aggregate(
+    public interface IMessageResultAggregator<in TMessageBase, R> : IMessageMiddleware {
+        R Aggregate<M>(
             M m,
-            MessageContext context, 
+            MessageContext context,
             IEnumerable<R> results,
             Func<M, MessageContext, IEnumerable<R>, R> next
-        );
+        ) where M : TMessageBase, IMessage<M, R>;
     }
 }

@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 
 namespace Inspiring.Messaging.Core {
-    public interface IMessageDispatcher<M, R> : IMessageMiddleware where M : IMessage<M, R> {
-        IEnumerable<R> Dispatch(
+    public interface IMessageDispatcher<in TMessageBase, in TResultBase> : IMessageMiddleware {
+        IEnumerable<R> Dispatch<M, R>(
             M m,
             MessageContext context,
             IEnumerable<IHandles<M, R>> handlers,
-            Func<M, MessageContext, IEnumerable<IHandles<M, R>>, IEnumerable<R>> next);
+            Func<M, MessageContext, IEnumerable<IHandles<M, R>>, IEnumerable<R>> next
+        )
+            where M : TMessageBase, IMessage<M, R>
+            where R : TResultBase;
     }
 }
