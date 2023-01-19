@@ -22,7 +22,7 @@ namespace Inspiring.Messaging.Tests.Core {
         [Scenario]
         internal void Middlewares(IMessageMiddleware[] mws, string[] result) {
             GIVEN["several kinds of middleware"] |= () => {
-                var handlerProvider = Substitute.For<IHandlerProvider<TestMessage, string[]>>();
+                var handlerProvider = Substitute.For<IHandlerProvider>();
                 handlerProvider.GetHandlers<TestMessage, string[]>(default, default, default).ReturnsForAnyArgs(new[] {
                     new TestHandler { Input = "Result 1" },
                     new TestHandler { Input = "Result 2" },
@@ -39,16 +39,16 @@ namespace Inspiring.Messaging.Tests.Core {
             THEN["the aggregated results are returned"] |= () => result.Should().BeEquivalentTo("[Result 2]", "[Result 1]");
         }
 
-        [Scenario]
-        internal void GenericMiddleware(ProcessorMock<IMessage, object> mw, ProcessorMock<OtherMessage, object> nonApplicableMw) {
-            GIVEN["some generic middlewares"] |= () => {
-                mw = new ProcessorMock<IMessage, object>();
-                nonApplicableMw = new ProcessorMock<OtherMessage, object>();
-            };
-            WHEN["sending a message"] |= () => Send(new TestMessage(), new IMessageMiddleware[] { nonApplicableMw, mw });
-            THEN["compatible middlewares are called"] |= () => mw.WasCalled.Should().BeTrue();
-            AND["incompatible middlewares are not called"] |= () => nonApplicableMw.WasCalled.Should().BeFalse();
-        }
+        //[Scenario]
+        //internal void GenericMiddleware(ProcessorMock mw, ProcessorMock nonApplicableMw) {
+        //    GIVEN["some generic middlewares"] |= () => {
+        //        mw = new ProcessorMock();
+        //        nonApplicableMw = new ProcessorMock();
+        //    };
+        //    WHEN["sending a message"] |= () => Send(new TestMessage(), new IMessageMiddleware[] { nonApplicableMw, mw });
+        //    THEN["compatible middlewares are called"] |= () => mw.WasCalled.Should().BeTrue();
+        //    AND["incompatible middlewares are not called"] |= () => nonApplicableMw.WasCalled.Should().BeFalse();
+        //}
 
         [Scenario]
         internal void DefaultPipelineBehavior(IHandles<TestMessage<string>, string>[] handlers, string result) {
@@ -79,25 +79,24 @@ namespace Inspiring.Messaging.Tests.Core {
             return new ContainerMessenger(c).Send(message);
         }
 
-        internal class ProcessorMock<MBase, RBase> : IMessageProcessor<MBase, RBase> {
+        internal class ProcessorMock : IMessageProcessor {
             public bool WasCalled { get; set; }
 
             public R Process<M, R>(M m, MessageContext context, Func<M, MessageContext, R> next)
-                where M : MBase, IMessage<M, R>
-                where R : RBase {
+                where M : IMessage<M, R> {
 
                 WasCalled = true;
                 return next(m, context);
             }
         }
 
-        internal class TestMessageAggregator : IMessageResultAggregator<TestMessage, string[]> {
+        internal class TestMessageAggregator : IMessageResultAggregator<string[]> {
             public string[] Aggregate<M>(
                 M m,
                 MessageContext context,
                 IEnumerable<string[]> results,
                 Func<M, MessageContext, IEnumerable<string[]>, string[]> next
-            ) where M : TestMessage, IMessage<M, string[]> {
+            ) where M : IMessage<M, string[]> {
                 return next(m, context, results)
                     .Reverse()
                     .ToArray();
@@ -105,15 +104,15 @@ namespace Inspiring.Messaging.Tests.Core {
         }
 
         internal class DispatcherAndInvoker :
-            IMessageDispatcher<TestMessage, IEnumerable<string>>,
-            IHandlerInvoker<TestMessage, IEnumerable<string>> {
+            IMessageDispatcher,
+            IHandlerInvoker {
 
             public IEnumerable<R> Dispatch<M, R>(
                 M m,
                 MessageContext context,
                 IEnumerable<IHandles<M, R>> handlers,
                 Func<M, MessageContext, IEnumerable<IHandles<M, R>>, IEnumerable<R>> next
-            ) where M : TestMessage, IMessage<M, R> where R : IEnumerable<string> {
+            ) where M : IMessage<M, R>{
                 return next(m, context, handlers.Take(2));
             }
 
@@ -122,11 +121,12 @@ namespace Inspiring.Messaging.Tests.Core {
                 MessageContext context,
                 IHandles<M, R> h,
                 Func<M, MessageContext, IHandles<M, R>, R> next
-            ) where M : TestMessage, IMessage<M, R> where R : IEnumerable<string> {
-                return (R)(object)h
-                    .Handle(m)
-                    .Select(x => $"[{x}]")
-                    .ToArray();
+            ) where M : IMessage<M, R> {
+                R r = h.Handle(m);
+
+                return r is IEnumerable<string> coll ?
+                    (R)(object)coll.Select(x => $"[{x}]").ToArray() :
+                    r;                    
             }
         }
 

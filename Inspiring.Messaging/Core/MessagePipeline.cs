@@ -27,27 +27,27 @@ namespace Inspiring.Messaging.Core {
             _defaultAggregator = defaultAggregator;
 
             _processPipeline = Pipeline<M, MessageContext, R>.Create(
-                middlewares.OfType<IMessageProcessor<M, R>>(), 
+                middlewares.OfType<IMessageProcessor>(), 
                 m => m.Process, 
                 ProcessCore);
 
             _getHandlerPipeline = Pipeline<M, MessageContext, IEnumerable<IHandles<M, R>>>.Create(
-                middlewares.OfType<IHandlerProvider<M, R>>(),
+                middlewares.OfType<IHandlerProvider>(),
                 m => m.GetHandlers,
                 GetHandlers);
 
             _dispatchPipeline = Pipeline<M, MessageContext, IEnumerable<IHandles<M, R>>, IEnumerable<R>>.Create(
-                middlewares.OfType<IMessageDispatcher<M, R>>(),
+                middlewares.OfType<IMessageDispatcher>(),
                 m => m.Dispatch,
                 DispatchToHandlers);
 
             _invokeHandlerPipeline = Pipeline<M, MessageContext, IHandles<M, R>, R>.Create(
-                middlewares.OfType<IHandlerInvoker<M, R>>(),
+                middlewares.OfType<IHandlerInvoker>(),
                 m => m.Invoke,
                 InvokeHandler);
 
             _aggregatePipeline = Pipeline<M, MessageContext, IEnumerable<R>, R>.Create(
-                middlewares.OfType<IMessageResultAggregator<M, R>>(),
+                middlewares.OfType<IMessageResultAggregator<R>>(),
                 m => m.Aggregate,
                 AggregateResults);
         }
