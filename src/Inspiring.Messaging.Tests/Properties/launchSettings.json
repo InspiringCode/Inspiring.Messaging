@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Inspiring.Messaging.Tests": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_JitDisasmSummary": "1"
+      }
+    }
+  }
+}
