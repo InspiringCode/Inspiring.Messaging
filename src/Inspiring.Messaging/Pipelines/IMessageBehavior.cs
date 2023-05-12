@@ -4,6 +4,6 @@ using System.Text;
 
 namespace Inspiring.Messaging.Pipelines {
     public interface IMessageBehavior {
-        void Configure(IPipelineBuilder pipeline);
+        void Configure<M, R, O, C>(PipelineBuilder<M, R, O, C> pipeline);
     }
 }

@@ -6,7 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Inspiring.Messaging.Pipelines {
+namespace Inspiring.Messaging.Pipelines
+{
     public class PipelineFactory {
         public static readonly PipelineFactory DefaultFactory = new();
 
@@ -43,9 +44,9 @@ namespace Inspiring.Messaging.Pipelines {
             return builder.Build();
         }
 
-        protected virtual void ConfigurePipeline(IPipelineBuilder b) {
+        protected virtual void ConfigurePipeline<M, R, O, C>(PipelineBuilder<M, R, O, C> b) {
             IEnumerable<IMessageBehavior> behaviors = _generalBehaviors
-                .Concat(new[] { b.ResultType, b.MessageType, b.ContextType, b.OperationType }
+                .Concat(new[] { typeof(R), typeof(M), typeof(C), typeof(O) }
                     .SelectMany(
                         t => t.GetCustomAttributes<MessageBehaviorAttribute>(inherit: true),
                         (t, attribute) => CreateBehavior(attribute.BehaviorType)));

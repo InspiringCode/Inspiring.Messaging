@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Inspiring.Messaging.Pipelines.Internal;
 
 namespace Inspiring.Messaging.Pipelines {
     public class PipelineBuilderTests : FeatureBase {
@@ -14,10 +13,10 @@ namespace Inspiring.Messaging.Pipelines {
             GIVEN["a pipeline with same steps and phases"] = () => b = new();
             WHEN["building and invoking the pipeline"] = () => {
                 actualSequence = "";
-                b.AddStep(new DelegateStepFactory<Phase1>(() => { }));
-                b.AddStep(new DelegateStepFactory<Phase2>(() => actualSequence += "2 "), order: 1, tag: "A");
-                b.AddStep(new DelegateStepFactory<Phase2>(() => actualSequence += "3 "), order: 5, tag: "B");
-                b.AddStep(new DelegateStepFactory<Phase2>(() => actualSequence += "1 "), order: 1, tag: "C");
+                b.AddStep<Phase1>(new DelegateStepFactory<Phase1>(() => { }).Create);
+                b.AddStep<Phase2>(new DelegateStepFactory<Phase2>(() => actualSequence += "2 ").Create, order: 1, tag: "A");
+                b.AddStep<Phase2>(new DelegateStepFactory<Phase2>(() => actualSequence += "3 ").Create, order: 5, tag: "B");
+                b.AddStep<Phase2>(new DelegateStepFactory<Phase2>(() => actualSequence += "1 ").Create, order: 1, tag: "C");
                 p = b.Build();
                 p.Invoke(new Invocation<TestMessage, int, object, object>(), new Phase2());
                 p.Invoke(new Invocation<TestMessage, int, object, object>(), new Phase1());
@@ -38,7 +37,7 @@ namespace Inspiring.Messaging.Pipelines {
             GIVEN["a reflection based step factory"] = () => sf = new();
             WHEN["adding the steps to an incompatible builder"] = () => {
                 b = new();
-                b.AddStep(new DelegateStepFactory<Phase1>(() => { }));
+                b.AddStep<Phase1>(new DelegateStepFactory<Phase1>(() => { }).Create);
                 b.AddStep(sf, "CreateStepForAsyncStringMessage");
                 b.AddStep(sf, "CreateStepForTestInterfaceContext");
                 b.Build().Invoke(new(), new Phase1());

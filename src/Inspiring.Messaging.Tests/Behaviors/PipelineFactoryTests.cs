@@ -1,16 +1,12 @@
-﻿using Inspiring.Messaging.Pipelines.Internal;
-using NSubstitute;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Inspiring.Messaging.Pipelines {
     public class PipelineFactoryTests : FeatureBase {
         [Scenario]
         internal void Test(
-            TestPipelineFactory f, 
+            TestPipelineFactory f,
             PipelineBuilder<TestMessage, TestResult, TestOperation, TestContext> builder,
             Action action
         ) {
@@ -40,7 +36,7 @@ namespace Inspiring.Messaging.Pipelines {
                 new Action(() => f.ConfigurePipeline(new PipelineBuilder<NoParameterlessCtorMessage, TestResult, TestOperation, TestContext>()));
             THEN["a helpful exception is thrown"] = () => action
                 .Should().Throw<ArgumentException>()
-                .Which.Message.Should().Contain("IServiceProvider");            
+                .Which.Message.Should().Contain("IServiceProvider");
         }
 
         internal class TestPipelineFactory : PipelineFactory {
@@ -52,7 +48,7 @@ namespace Inspiring.Messaging.Pipelines {
             public TestPipelineFactory(IEnumerable<IMessageBehavior> generalBehaviors, IServiceProvider behaviorFactory)
                 : base(generalBehaviors, behaviorFactory) { }
 
-            public void ConfigurePipeline<M, R, O, C>(PipelineBuilder<M, R, O, C> b)
+            public new void ConfigurePipeline<M, R, O, C>(PipelineBuilder<M, R, O, C> b)
                 => base.ConfigurePipeline(b);
         }
 
@@ -73,18 +69,16 @@ namespace Inspiring.Messaging.Pipelines {
 
         internal struct TestPhase { }
 
-        internal class TestBehavior<T> : IMessageBehavior, IGenericStepFactory<TestPhase> {
+        internal class TestBehavior<T> : IMessageBehavior {
             private readonly object _tag;
 
             private TestBehavior() { }
 
             public TestBehavior(object tag) => _tag = tag;
 
-            public virtual void Configure(IPipelineBuilder pipeline) {
-                pipeline.AddStep(this, tag: _tag ?? typeof(T));
+            public void Configure<M, R, O, C>(PipelineBuilder<M, R, O, C> pipeline) {
+                pipeline.AddStep<TestPhase>(next => next, tag: _tag ?? typeof(T));
             }
-
-            public PipelineStep<M, R, O, C, TestPhase> Create<M, R, O, C>(PipelineStep<M, R, O, C, TestPhase> next) => next;
         }
 
         internal class NoParameterlessCtorBehavior {
