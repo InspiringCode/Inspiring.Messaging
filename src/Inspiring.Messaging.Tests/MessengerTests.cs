@@ -1,6 +1,5 @@
 ﻿using Inspiring.Messaging.Behaviors.Phases;
 using Inspiring.Messaging.Core;
-using Inspiring.Messaging.Pipelines;
 using Inspiring.Messaging.Synchronous;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -24,29 +23,78 @@ public class MessengerTests : FeatureBase {
     }
 
     [Scenario]
-    internal void SendMessage(IHandles<TestMessage, string> h, string result, TestMessage m) {
+    internal void SendMessage(
+        IHandles<TestMessage, string> h1,
+        IHandles<TestMessage, string> h2,
+        string result, 
+        TestMessage m
+    ) {
         GIVEN["a handler"] = () => {
-            _services.Add(h = Substitute.For<IHandles<TestMessage, string>>());
-            h.Handle(default).ReturnsForAnyArgs("test-result");
+            _services.Add(h1 = Substitute.For<IHandles<TestMessage, string>>());
+            _services.Add(h2 = Substitute.For<IHandles<TestMessage, string>>());
+            h1.Handle(default).ReturnsForAnyArgs("test-result-1");
+            h2.Handle(default).ReturnsForAnyArgs("test-result-2");
         };
-        WHEN["sending a message"] = () => result = _messenger.SendSync(m = new TestMessage());
-        THEN["the handler is invoked exactly once"] = () => h.Received(1).Handle(m);
-        AND["the result of the handler is returned"] = () => result.Should().Be("test-result");
+        WHEN["sending a message"] = () => result = _messenger.Send(m = new TestMessage());
+        THEN["all handlers are invoked exactly once"] = () => {
+            h1.Received(1).Handle(m);
+            h2.Received(1).Handle(m);
+        };
+        AND["the result of the first handler is returned"] = () => result.Should().Be("test-result-1");
 
-        //WHEN["no handlers are registered for a message"] = () => _services.Clear();
-        //THEN["sending a message throws an exception"] = () => new Action(() => _messenger.SendSync(new TestMessage()))
-        //    .Should().Throw<MessengerException>();
+        WHEN["publishing a message"] = () => {
+            h1.ClearReceivedCalls();
+            h2.ClearReceivedCalls();
+            result = _messenger.Publish(m);
+        };
+        THEN["all handlers are invoked exactly once"] = () => {
+            h1.Received(1).Handle(m);
+            h2.Received(1).Handle(m);
+        };
+        AND["the result of the first handler is returned"] = () => result.Should().Be("test-result-1");
+
+        WHEN["no handlers are registered for a message"] = () => _services.Clear();
+        THEN["sending a message throws an exception"] = () => new Action(() => _messenger.Send(new TestMessage()))
+            .Should().ThrowExactly<MessengerException>();
+        AND["publishing a message does not throw an exception"] = () => _messenger.Publish(m);
     }
 
     [Scenario]
-    internal void SendMessageAsync(IHandlesAsync<TestMessage, string> h, string result, TestMessage m) {
+    internal void SendMessageAsync(
+        IHandlesAsync<TestMessage, string> h1,
+        IHandlesAsync<TestMessage, string> h2, 
+        string result, 
+        TestMessage m
+    ) {
         GIVEN["a handler"] = () => {
-            _services.Add(h = Substitute.For<IHandlesAsync<TestMessage, string>>());
-            h.Handle(default).ReturnsForAnyArgs("test-result");
+            _services.Add(h1 = Substitute.For<IHandlesAsync<TestMessage, string>>());
+            _services.Add(h2 = Substitute.For<IHandlesAsync<TestMessage, string>>());
+            h1.Handle(default).ReturnsForAnyArgs("test-result-1");
+            h2.Handle(default).ReturnsForAnyArgs("test-result-2");
         };
+
         WHEN["sending a message"] = async () => result = await _messenger.SendAsync(m = new TestMessage());
-        THEN["the handler is invoked exactly once"] = () => h.Received(1).Handle(m);
-        AND["the result of the handler is returned"] = () => result.Should().Be("test-result");
+        THEN["all handlers are invoked exactly once"] = () => {
+            h1.Received(1).Handle(m);
+            h2.Received(1).Handle(m);
+        };
+        AND["the result of the first handler is returned"] = () => result.Should().Be("test-result-1");
+
+        WHEN["publishing a message"] = async () => {
+            h1.ClearReceivedCalls();
+            h2.ClearReceivedCalls();
+            result = await _messenger.PublishAsync(m);
+        };
+        THEN["all handlers are invoked exactly once"] = () => {
+            h1.Received(1).Handle(m);
+            h2.Received(1).Handle(m);
+        };
+        AND["the result of the first handler is returned"] = () => result.Should().Be("test-result-1");
+
+        WHEN["no handlers are registered for a message"] = () => _services.Clear();
+        THEN["sending a message throws an exception"] = () => new Func<Task>(async () => await _messenger.SendAsync(new TestMessage()))
+            .Should().ThrowAsync<MessengerException>();
+        AND["publishing a message does not throw an exception"] = () => _messenger.PublishAsync(m);
     }
 
     [Scenario]

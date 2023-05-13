@@ -27,5 +27,14 @@ namespace Inspiring.Messaging
 
             return phase.Result!;
         }
+
+        public async ValueTask<R> PublishAsync<M, R>(IMessage<M, R> message) where M : IMessage<M, R> {
+            ProcessMessage<R> phase = await Dispatcher.DispatchAsync<M, R, PublishOperation, ProcessMessage<R>>(
+                (M)message,
+                PublishOperation.Instance,
+                phase: new ProcessMessage<R>(default!));
+
+            return phase.Result!;
+        }
     }
 }

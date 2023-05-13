@@ -6,5 +6,7 @@ namespace Inspiring.Messaging {
         IMessageDispatcher Dispatcher { get; }
 
         ValueTask<R> SendAsync<M, R>(IMessage<M, R> message) where M : IMessage<M, R>;
+
+        ValueTask<R> PublishAsync<M, R>(IMessage<M, R> message) where M : IMessage<M, R>;
     }
 }
