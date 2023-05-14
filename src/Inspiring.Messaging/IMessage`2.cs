@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Inspiring.Messaging.Core;
 
-namespace Inspiring.Messaging {
-    public interface IMessage<out M, in R> where M : IMessage<M, R> { }
-}
+namespace Inspiring.Messaging;
+
+public interface IMessage<out M, in R> : IMessage where M : IMessage<M, R> { }
