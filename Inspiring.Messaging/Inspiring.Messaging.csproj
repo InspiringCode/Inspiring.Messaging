@@ -4,6 +4,13 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <PackageProjectUrl>https://github.com/InspiringCode/Inspiring.Messaging</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/InspiringCode/Inspiring.Messaging.git</RepositoryUrl>
+    <Description>A simple but powerful, type-safe and extendable in-process message bus.</Description>
+    <Company>Daniel Berghold</Company>
+    <Title>$(AssemblyName)</Title>
+    <PackageTags>messenger,message-bus,in-process,mediator</PackageTags>
   </PropertyGroup>
 
 </Project>
