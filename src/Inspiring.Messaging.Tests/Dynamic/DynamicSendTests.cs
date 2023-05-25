@@ -1,25 +1,32 @@
-﻿using Inspiring.Messaging.Core;
-using NSubstitute;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
+﻿using Inspiring.Messaging.Testing;
 
 namespace Inspiring.Messaging.Dynamic;
 
 public class DynamicSendTests : FeatureBase {
     [Scenario]
-    internal void DynamicSend(IMessenger messenger, IHandles<TestMessage, int> h, TestMessage m, int result) {
-        USING["a messenger"] = () => messenger = 
-            new Messenger(
-                new TestServiceProvider {  
-                    (h = Substitute.For<IHandles<TestMessage, int>>())
-                });
-        GIVEN["a handler"] = () => h.Handle(m = new TestMessage()).Returns(1234);
-        WHEN["sending a weakly typed message"] = () => result = messenger.SendDynamic<int>((IMessage)m);
-        THEN["the result is returned"] = () => result.Should().Be(1234);
+    internal void DynamicSend(
+        TestMessenger m, 
+        TestMessage msg, 
+        int result,
+        object objectResult
+    ) {
+        USING["a messenger with a handler"] = () => m = new TestMessenger()
+            .Handle<TestMessage, int>(m => 1337);
+
+        WHEN["sending a weakly typed message"] = () => result = m.SendDynamic<int>(msg = new());
+        THEN["the result is returned"] = () => result.Should().Be(1337);
+
+        WHEN["sending it async"] = async () => result = await m.SendDynamicAsync<int>(msg);
+        THEN["the result is returned"] = () => result.Should().Be(1337);
+
+        WHEN["publishing it"] = () => result = m.PublishDynamic<int>(msg);
+        THEN["the result is returned"] = () => result.Should().Be(1337);
+
+        WHEN["publishing it async"] = async () => result = await m.PublishDynamicAsync<int>(msg);
+        THEN["the result is returned"] = () => result.Should().Be(1337);
+
+        WHEN["specifying a base type as result type"] = () => objectResult = m.SendDynamic<object>(msg);
+        THEN["the result is returned"] = () => objectResult.Should().Be(1337);
     }
 
     internal class TestMessage : IMessage<TestMessage, int> { }
