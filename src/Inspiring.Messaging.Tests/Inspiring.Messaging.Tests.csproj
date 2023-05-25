@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Inspiring.Messaging\Inspiring.Messaging.csproj" />
+    <ProjectReference Include="..\Inspiring.Messaging.Testing\Inspiring.Messaging.Testing.csproj" />
   </ItemGroup>
 
 </Project>

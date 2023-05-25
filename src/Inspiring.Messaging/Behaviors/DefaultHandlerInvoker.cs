@@ -18,8 +18,8 @@ public class DefaultHandlerInvoker<M, R, O, C> : PipelineStep<M, R, O, C, Invoke
         if (phase.Handler is IHandlesAsync<M, R> h)
             return phase with { Result = await h.Handle(i.Message) };
 
-        //if (phase.Handler is IHandles<M, R> hs)
-        //    return phase with { Result = hs.Handle(i.Message) };
+        if (phase.Handler is IHandles<M, R> hs)
+            return phase with { Result = hs.Handle(i.Message) };
 
         return phase;
     }

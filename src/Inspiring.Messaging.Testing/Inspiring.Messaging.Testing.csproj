@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="..\Inspiring.Messaging\Internal\CompilerServices.cs" Link="Internal\CompilerServices.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Inspiring.Messaging\Inspiring.Messaging.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Internal\" />
+  </ItemGroup>
+</Project>

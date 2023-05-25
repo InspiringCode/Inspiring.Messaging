@@ -7,7 +7,6 @@ namespace Inspiring.Messaging {
         private readonly PipelineStep<M, R, O, C, TPhase> _next;
         private readonly Action _action;
 
-
         public DelegateStep(PipelineStep<M, R, O, C, TPhase> next, Action action = null)
             => (_next, _action) = (next, action ?? delegate { });
 

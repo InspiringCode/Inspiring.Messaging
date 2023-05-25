@@ -58,9 +58,9 @@ namespace Inspiring.Messaging.Pipelines
         private IMessageBehavior CreateBehavior(Type behaviorType) {
             return (IMessageBehavior)
                 (_behavorFactory.GetService(behaviorType) ??
-                CreateWithReflection(behaviorType));
+                createWithReflection(behaviorType));
 
-            static object CreateWithReflection(Type behaviorType) {
+            static object createWithReflection(Type behaviorType) {
                 try {
                     return Activator.CreateInstance(behaviorType, nonPublic: true);
                 } catch (Exception e) when (!e.IsCritical()) {
