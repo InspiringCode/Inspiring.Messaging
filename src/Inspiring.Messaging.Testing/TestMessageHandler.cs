@@ -2,6 +2,7 @@
 using Inspiring.Messaging.Core;
 using Inspiring.Messaging.Pipelines;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Headers;
@@ -17,6 +18,8 @@ internal class TestMessageHandler {
     public List<Delegate> Spies { get; } = new();
 
     public List<Delegate> Filters { get; } = new();
+
+    public List<Delegate> Loggers { get; } = new();
     
     public static void AddToPipeline<M, R, O, C>(PipelineBuilder<M, R, O, C> pipeline, TestMessageHandler handler) {
         if (pipeline is PipelineBuilder<InitializeTestMessenger, object, object, C> p)
@@ -36,6 +39,9 @@ internal class TestMessageHandler {
             => (_next, _handler) = (next, handler);
 
         public override ProcessMessage<R> Invoke(Invocation<M, R, O, C> i, ProcessMessage<R> phase) {
+            foreach (Action<M> logger in _handler.Loggers.OfType<Action<M>>())
+                logger(i.Message);
+                        
             MessengerArgs args = new(i.Operation!, i.Context!);
             
             var filters = _handler
@@ -52,6 +58,9 @@ internal class TestMessageHandler {
         }
 
         public override async ValueTask<ProcessMessage<R>> InvokeAsync(Invocation<M, R, O, C> i, ProcessMessage<R> phase) {
+            foreach (Action<M> logger in _handler.Loggers.OfType<Action<M>>())
+                logger(i.Message);
+
             MessengerArgs args = new(i.Operation!, i.Context!);
 
             var filters = _handler

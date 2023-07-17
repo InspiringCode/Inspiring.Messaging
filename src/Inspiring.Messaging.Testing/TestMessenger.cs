@@ -1,8 +1,7 @@
-﻿using Inspiring.Messaging.Behaviors.Phases;
-using Inspiring.Messaging.Core;
+﻿using Inspiring.Messaging.Core;
 using Inspiring.Messaging.Pipelines;
 using System;
-using System.ComponentModel.Design;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -22,7 +21,7 @@ public class TestMessenger : IMessenger {
             $"with a '{nameof(TestMessengerBehavior)}' to the constructor of '{nameof(Messenger)}'.";
 
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        
+
         InitializeTestMessenger init = new();
         try {
             // If no pipeline step for the given phase is registered, an ArgumentException is thrown
@@ -34,9 +33,9 @@ public class TestMessenger : IMessenger {
         } catch (ArgumentException? ex) {
             throw new ArgumentException(TestBehaviorMissingText, nameof(inner), ex);
         }
-                
-        _handler = 
-            init.Handler ?? 
+
+        _handler =
+            init.Handler ??
             throw new ArgumentException(TestBehaviorMissingText, nameof(inner));
     }
 
@@ -86,6 +85,18 @@ public class TestMessenger : IMessenger {
         return this;
     }
 
+    public TestMessenger StartRecording<TMessage>(ICollection<TMessage> messages, bool keepExisting = false) {
+        if (!keepExisting)
+            messages.Clear();
+
+        _handler.Loggers.Add(new Action<TMessage>(messages.Add));
+        return this;
+    }
+
+    public TestMessenger StopRecording() {
+        _handler.Loggers.Clear();
+        return this;
+    }
 
     private static IMessenger CreateMessenger(IMessageBehavior[] additionalBehaviors) {
         IMessageBehavior[] behaviors = new[] { new TestMessengerBehavior() }
@@ -97,7 +108,7 @@ public class TestMessenger : IMessenger {
         return new Messenger(new NullServiceProvider(), f, c);
     }
 
-    internal class InitializeTestMessenger : IMessage<InitializeTestMessenger, object> { 
+    internal class InitializeTestMessenger : IMessage<InitializeTestMessenger, object> {
         public TestMessageHandler? Handler { get; set; }
     }
 

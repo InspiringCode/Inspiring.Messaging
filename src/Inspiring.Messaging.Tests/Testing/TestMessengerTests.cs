@@ -113,6 +113,49 @@ public class TestMessengerTests : FeatureBase {
         THEN["the test handler is invoked"] = () => result.Should().Be("test-result");
     }
 
+    [Scenario]
+    internal void MessageRecording(
+        TestMessenger m, 
+        List<TestMessage> recorded, 
+        List<IMessage> untypedRecorded, 
+        TestMessage[] expected
+    ) {
+        GIVEN["a test messenger"] = () => m = new TestMessenger().Handle<TestMessage, string>(m => "");
+        WHEN["recording"] = () => m.StartRecording(recorded = new());
+        AND["sending two messages"] = () => {
+            expected = new[] { new TestMessage(), new TestMessage() };
+            m.Send(expected[0]);
+            m.Send(expected[1]);
+        };
+        THEN["the messages are recorded"] = () => recorded.Should().Equal(expected);
+
+        WHEN["stopping the recording"] = () => m.StopRecording();
+        AND["sending a message"] = () => m.Send(new TestMessage());
+        THEN["the message is not recorded"] = () => recorded.Should().Equal(expected);
+
+        WHEN["restarting the recording"] = () => m.StartRecording(recorded);
+        AND["sending a message"] = () => m.SendAsync(expected[0]);
+        THEN["the old messages are cleared"] = () => recorded.Should().Equal(expected[0]);
+
+        WHEN["stopping the recording"] = () => m.StopRecording();
+        AND["continuing the recording while keeping the existing messages"] = () => m.StartRecording(recorded, keepExisting: true);
+        AND["sending a message"] = () => m.Send(expected[1]);
+        THEN["it is appended to the recorded messages"] = () => recorded.Should().Equal(expected);
+
+        WHEN["recording to an untyped list"] = () => m.StartRecording(untypedRecorded = new());
+        AND["sending a message"] = () => m.Send(expected[0]);
+        THEN["it is recorded"] = () => untypedRecorded.Should().Equal(expected[0]);
+
+        GIVEN["a message is filtered by the test messenger"] = () => m
+            .Filter<TestMessage, string>((m, args, next) => "")
+            .FilterAsync<TestMessage, string>((m, args, next) => Task.FromResult(""));
+        WHEN["recording"] = () => m.StopRecording().StartRecording(recorded);
+        AND["sending messages"] = () => {
+            m.Send(expected[0]);
+            return m.SendAsync(expected[1]);
+        };
+        THEN["they are still recorded"] = () => recorded.Should().Equal(expected);                
+    }
 
     internal class TestMessage : IMessage<TestMessage, string> { }
 }
