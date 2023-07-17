@@ -1,4 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Version>2.0.0-alpha1</Version>
+    <PackageProjectUrl>https://github.com/InspiringCode/Inspiring.Messaging</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/InspiringCode/Inspiring.Messaging.git</RepositoryUrl>
+    <Description>Unit testing support for Inspiring.Messaging.</Description>
+    <Company>Daniel Berghold</Company>
+    <Title>$(AssemblyName)</Title>
+    <PackageTags>messenger,message-bus,in-process,mediator</PackageTags>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Inspiring.Messaging\Internal\CompilerServices.cs" Link="Internal\CompilerServices.cs" />
   </ItemGroup>
