@@ -1,5 +1,16 @@
 ﻿using System.ComponentModel;
 
+#if NETSTANDARD2_0
+
+namespace System.Diagnostics.CodeAnalysis {
+    internal sealed class NotNullWhenAttribute : Attribute {
+        public NotNullWhenAttribute(bool returnValue) => ReturnValue = returnValue;
+
+        public bool ReturnValue { get; }
+    }
+}
+#endif
+
 namespace System.Runtime.CompilerServices {
 #if !NET5_0_OR_GREATER
 

@@ -52,6 +52,14 @@ namespace Inspiring.Messaging.Pipelines {
             };
             THEN["the steps are executed"] = () => sf.Invocations.Should().BeEquivalentTo("context-step", "async-string-step");
 
+            WHEN["adding generics have to inferred only from constraints"] = () => {
+                sf.Invocations.Clear();
+                PipelineBuilder<TestMessage, Task<string>, object, TestContext> b = new();
+                b.AddStep(sf, nameof(ReflectionStepFactory.CreateStepForRoutedMessage));
+                b.Build().Invoke(new(), new Phase1());
+            };
+            THEN["the steps are executed"] = () => sf.Invocations.Should().BeEquivalentTo("routed-Employee");
+
             WHEN["adding a step where the method is not found"] = () => action = new Action(() => b.AddStep(sf, "NonexistingMethod"));
             THEN["an exception is thrown"] = () => action.Should().Throw<ArgumentException>().Which.Message.Should().Match("*not define*");
 
@@ -66,6 +74,12 @@ namespace Inspiring.Messaging.Pipelines {
                 PipelineStep<M, Task<string>, O, C, Phase1> next
             ) {
                 return new DelegateStep<M, Task<string>, O, C, Phase1>(next, () => Invocations.Add("async-string-step"));
+            }
+
+            public PipelineStep<M, R, O, C, Phase1> CreateStepForRoutedMessage<M, R, O, C, TTarget>(
+                PipelineStep<M, R, O, C, Phase1> next
+            ) where M : IRoutedMessage<TTarget> {
+                return new DelegateStep<M, R, O, C, Phase1>(next, () => Invocations.Add($"routed-{typeof(TTarget).Name}"));
             }
 
             private PipelineStep<M, R, O, C, Phase1> CreateStepForTestInterfaceContext<M, O, C, R>(
@@ -102,10 +116,14 @@ namespace Inspiring.Messaging.Pipelines {
 
         //private record DelegateInvocation<TPhase>(object Message, object Operation, object Context, TPhase Phase);
 
-        internal class TestMessage { }
+        internal class IRoutedMessage<TTarget> { }
+
+        internal class TestMessage : IRoutedMessage<Employee> { }
 
         internal class Phase1 { }
 
         internal class Phase2 { }
+
+        internal class Employee { }
     }
 }

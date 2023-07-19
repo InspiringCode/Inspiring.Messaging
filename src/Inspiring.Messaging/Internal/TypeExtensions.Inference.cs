@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -18,14 +20,22 @@ namespace Inspiring.Reflection {
             this MethodInfo method,
             Type[] argumentTypes,
             out Type[] genericArgs,
-            bool dontCheckGenericConstraints = false
+            bool dontCheckGenericConstraints = false,
+            bool inferFromConstraints = false
         ) {
             genericArgs = Type.EmptyTypes;
-            return
+
+            bool allInferred =
                 TryInferBounds(method, argumentTypes, out InferredBounds bounds) &&
-                bounds.TryInferGenericParameters(out genericArgs) &&
-                (dontCheckGenericConstraints || method.SatisfiesGenericConstraints(genericArgs));
+                bounds.TryInferGenericParameters(out genericArgs, breakEarly: !inferFromConstraints);
+
+            if (!allInferred && inferFromConstraints)
+                allInferred = bounds.TryInferParametersFromConstraints(out genericArgs);
+
+
+            return allInferred && (dontCheckGenericConstraints || method.SatisfiesGenericConstraints(genericArgs));
         }
+
 
 #if INSPIRING_REFLECTION
         internal
@@ -153,16 +163,65 @@ namespace Inspiring.Reflection {
 
             }
 
-            public bool TryInferGenericParameters(out Type[] genericParameters) {
+            public bool TryInferGenericParameters(out Type[] genericArguments, bool breakEarly) {
+                bool success = true;
+
                 for (int i = 0; i < _bounds.Length; i++) {
                     if (!_bounds[i].TryFixType()) {
-                        genericParameters = Type.EmptyTypes;
-                        return false;
+                        success = false;
+                        if (breakEarly) break;
                     }
                 }
 
-                genericParameters = Array.ConvertAll(_bounds, pb => pb.InferredType!);
+                genericArguments = success ?
+                    Array.ConvertAll(_bounds, pb => pb.InferredType!) :
+                    Type.EmptyTypes;
+
+                return success;
+            }
+
+
+            public bool TryInferParametersFromConstraints(out Type[] genericArguments) {
+                genericArguments = Type.EmptyTypes;
+                int previousUnresolved;
+                int unresolved = Bounds.Count(b => b.InferredType == null);
+
+                do {
+                    previousUnresolved = unresolved;
+
+                    foreach (Type genericParameter in _genericParameters) {
+                        if (IsFixed(genericParameter, out Type? genericArgument)) {
+                            if (!InferBoundsFromConstraint(genericParameter, genericArgument))
+                                return false;
+                        }
+                    }
+
+                    if (TryInferGenericParameters(out genericArguments, breakEarly: false))
+                        return true;
+
+                    unresolved = Bounds.Count(b => b.InferredType == null);
+                } while (unresolved < previousUnresolved);
+
+                return unresolved == 0;
+            }
+
+            private bool InferBoundsFromConstraint(Type genericParameter, Type genericArgument) {
+                foreach (Type constraint in genericParameter.GetGenericParameterConstraints()) {
+                    bool constraintViolated = !TryInferGenericParameterBounds(
+                        source: genericArgument,
+                        target: constraint,
+                        GenericParameterAttributes.Covariant);
+
+                    if (constraintViolated) return false;
+                }
+
                 return true;
+            }
+
+            private bool IsFixed(Type genericParameter, [NotNullWhen(true)] out Type? inferredType) {
+                int i = Array.IndexOf(_genericParameters, genericParameter);
+                inferredType = _bounds[i].InferredType;
+                return inferredType != null;
             }
 
             private bool FindImplementation(Type type, Type @interface, ref Type implementation, out bool isUnique) {

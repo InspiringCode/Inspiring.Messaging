@@ -7,16 +7,13 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-namespace Inspiring.Messaging.Pipelines
-{
-    public class PipelineBuilder<M, R, O, C>
-    {
+namespace Inspiring.Messaging.Pipelines {
+    public class PipelineBuilder<M, R, O, C> {
         private readonly List<PhaseBuilder> _phases = new();
 
         public IEnumerable<IStepInfo> Steps => _phases.SelectMany(p => p.Steps);
 
-        public void AddStep<TPhase>(IStepFactory<TPhase> stepFactory, string factoryMethodName, int order = 0, object? tag = null)
-        {
+        public void AddStep<TPhase>(IStepFactory<TPhase> stepFactory, string factoryMethodName, int order = 0, object? tag = null) {
             MethodInfo factoryMethod = stepFactory
                 .GetType()
                 .GetMethod(factoryMethodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) ??
@@ -33,9 +30,7 @@ namespace Inspiring.Messaging.Pipelines
             if (!hasExpectedSignature)
                 throw createArgumentException("The specified factory method has the wrong method signature.", nameof(stepFactory));
 
-            if (factoryMethod.TryInferTypes(new[] { typeof(PipelineStep<M, R, O, C, TPhase>) }, out Type[] genericArgs))
-            {
-
+            if (factoryMethod.TryInferTypes(new[] { typeof(PipelineStep<M, R, O, C, TPhase>) }, out Type[] genericArgs, inferFromConstraints: true)) {
                 var factory = (Func<PipelineStep<M, R, O, C, TPhase>, PipelineStep<M, R, O, C, TPhase>>)factoryMethod
                     .MakeGenericMethod(genericArgs)
                     .CreateDelegate(typeof(Func<PipelineStep<M, R, O, C, TPhase>, PipelineStep<M, R, O, C, TPhase>>), stepFactory);
@@ -52,7 +47,7 @@ namespace Inspiring.Messaging.Pipelines
         }
 
         public void AddStep<TPhase>(
-            Func<PipelineStep<M, R, O, C, TPhase>, PipelineStep<M, R, O, C, TPhase>> stepFactory, 
+            Func<PipelineStep<M, R, O, C, TPhase>, PipelineStep<M, R, O, C, TPhase>> stepFactory,
             int order = 0,
             object? tag = null
         ) {
@@ -66,8 +61,7 @@ namespace Inspiring.Messaging.Pipelines
             phase.AddStep(stepFactory, order, tag);
         }
 
-        internal void SetTerminalStep<TPhase>(PipelineStep<M, R, O, C, TPhase> step)
-        {
+        internal void SetTerminalStep<TPhase>(PipelineStep<M, R, O, C, TPhase> step) {
             PhaseBuilder<TPhase>? phase = _phases
                 .OfType<PhaseBuilder<TPhase>>()
                 .FirstOrDefault();
@@ -78,22 +72,19 @@ namespace Inspiring.Messaging.Pipelines
             phase.TerminationStep = step;
         }
 
-        internal Pipeline<M, R, O, C> Build()
-        {
+        internal Pipeline<M, R, O, C> Build() {
             return new Pipeline<M, R, O, C>(_phases
                 .Select(p => p.Build())
                 .ToArray());
         }
 
-        private abstract class PhaseBuilder
-        {
+        private abstract class PhaseBuilder {
             public abstract IEnumerable<IStepInfo> Steps { get; }
 
             public abstract object Build();
         }
 
-        private class PhaseBuilder<TPhase> : PhaseBuilder
-        {
+        private class PhaseBuilder<TPhase> : PhaseBuilder {
             private readonly List<StepInfo> _steps = new();
 
             public PipelineStep<M, R, O, C, TPhase>? TerminationStep { get; set; }
@@ -103,8 +94,7 @@ namespace Inspiring.Messaging.Pipelines
             public void AddStep(Func<PipelineStep<M, R, O, C, TPhase>, PipelineStep<M, R, O, C, TPhase>> factory, int order, object? tag)
                 => _steps.Add(new StepInfo { Factory = factory, Order = order, Tag = tag });
 
-            public override object Build()
-            {
+            public override object Build() {
                 PipelineStep<M, R, O, C, TPhase> root = TerminationStep ?? CreateDefaultTerminationStep();
                 foreach (var step in _steps.OrderByDescending(s => s.Order))
                     root = step.Factory(root);
@@ -115,13 +105,11 @@ namespace Inspiring.Messaging.Pipelines
             // unless need and that we can avoid creating another generic type of NoOpStep unless we
             // really need it.
             [MethodImpl(MethodImplOptions.NoInlining)]
-            private PipelineStep<M, R, O, C, TPhase> CreateDefaultTerminationStep()
-            {
+            private PipelineStep<M, R, O, C, TPhase> CreateDefaultTerminationStep() {
                 return NoOpStep<M, R, O, C, TPhase>.Default;
             }
 
-            private class StepInfo : IStepInfo
-            {
+            private class StepInfo : IStepInfo {
                 public required Func<PipelineStep<M, R, O, C, TPhase>, PipelineStep<M, R, O, C, TPhase>> Factory { get; init; }
 
                 public int Order { get; init; }
