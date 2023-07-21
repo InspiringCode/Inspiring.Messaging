@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>2.0.0-alpha2</Version>
+    <Version>2.0.0-alpha3</Version>
     <PackageProjectUrl>https://github.com/InspiringCode/Inspiring.Messaging</PackageProjectUrl>
     <RepositoryUrl>https://github.com/InspiringCode/Inspiring.Messaging.git</RepositoryUrl>
     <Description>A simple but powerful, type-safe and extendable in-process message bus.</Description>

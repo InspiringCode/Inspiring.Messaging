@@ -47,9 +47,11 @@ namespace Inspiring.Messaging.Pipelines
         protected virtual void ConfigurePipeline<M, R, O, C>(PipelineBuilder<M, R, O, C> b) {
             IEnumerable<IMessageBehavior> behaviors = _generalBehaviors
                 .Concat(new[] { typeof(R), typeof(M), typeof(C), typeof(O) }
-                    .SelectMany(
-                        t => t.GetCustomAttributes<MessageBehaviorAttribute>(inherit: true),
-                        (t, attribute) => CreateBehavior(attribute.BehaviorType)));
+                    .SelectMany(t => new[] { t }.Concat(t.GetInterfaces()))
+                    .SelectMany(t => t.GetCustomAttributes<MessageBehaviorAttribute>(inherit: true))
+                    .Select(x => x.BehaviorType)
+                    .Distinct()
+                    .Select(t => CreateBehavior(t)));
 
             foreach (IMessageBehavior behavior in behaviors)
                 behavior.Configure(b);
